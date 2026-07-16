@@ -27,6 +27,12 @@ subprojects {
 
     the<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension>().jvmToolchain(21)
 
+    the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
+        imports {
+            mavenBom("org.springframework.boot:spring-boot-dependencies:3.4.7")
+        }
+    }
+
     dependencies {
         "implementation"("org.springframework.boot:spring-boot-starter-data-jpa")
         "implementation"("org.springframework.boot:spring-boot-starter-web")
@@ -40,7 +46,6 @@ subprojects {
 
         "testImplementation"("org.springframework.boot:spring-boot-starter-test")
         "testImplementation"("org.mockito.kotlin:mockito-kotlin:5.4.0")
-        "testImplementation"("com.h2database:h2")
     }
 
     tasks.withType<Test> {
