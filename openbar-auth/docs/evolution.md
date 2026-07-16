@@ -36,7 +36,7 @@
 
 | Limitação | Impacto | Solução |
 |---|---|---|
-| Testes usam H2 (não PostgreSQL) | Não testa SQL específico do PG | Migration para Testcontainers |
+| ~~Testes usam H2 (não PostgreSQL)~~ | ~~Não testa SQL específico do PG~~ | ✅ Resolvido (PostgreSQL 16 real) |
 | Sem refresh token | Usuário precisa logar novamente a cada 1h | Adicionar refresh token |
 | Sem rate limiting | Vulnerável a brute force no login | Adicionar RateLimiter |
 | Sem auditoria de login | Não sabe quem logou quando | Adicionar AuditLog |
@@ -48,43 +48,14 @@
 
 ## Roadmap de Evolução
 
-### Fase 2 — Integração com PostgreSQL (Prioridade: ALTA)
+### ~~Fase 2 — Integração com PostgreSQL (Prioridade: ALTA)~~ ✅ CONCLUÍDA
 
 **Objetivo:** Testar contra o mesmo banco usado em produção.
 
-**Tarefa:** Migration de H2 para Testcontainers
-
-```kotlin
-// build.gradle.kts - adicionar dependências
-testImplementation("org.testcontainers:testcontainers:1.19.8")
-testImplementation("org.testcontainers:junit-jupiter:1.19.8")
-testImplementation("org.testcontainers:postgresql:1.19.8")
-```
-
-**Arquivo:** `src/test/resources/application-test.yml`
-```yaml
-spring:
-  datasource:
-    url: jdbc:tc:postgresql:16:///openbar_auth
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-  jpa:
-    hibernate:
-      ddl-auto: none
-  flyway:
-    enabled: true
-```
-
-**Mudanças necessárias:**
-- Remover H2 do `build.gradle.kts` (testImplementation)
-- Adicionar Testcontainers
-- Criar `application-test.yml` com configuração TC
-- Atualizar testes de repositório para usar `@ActiveProfiles("test")`
-- Adicionar `testcontainers.properties` no resources
-
-**Critério de aceite:**
-- Todos os 42 testes passam com PostgreSQL via Testcontainers
-- CI Pipeline usa Docker (já usa para build, precisa para testes)
-- Coverage mantido > 90%
+**Implementado:** PostgreSQL 16 real via container Docker (porta 5433)
+- `@AutoConfigureTestDatabase(replace = NONE)` no `UserRepositoryTest`
+- `application-test.yml` com JDBC URL padrão
+- Todos os 42 testes passam contra PostgreSQL 16
 
 ---
 
@@ -222,7 +193,7 @@ fun listUsers pageable: Pageable): ResponseEntity<Page<UserResponse>>
 
 | Fase | Prioridade | Esforço | Impacto |
 |---|---|---|---|
-| 2 — Testcontainers | ALTA | Médio | Alto (confiança nos testes) |
+| ~~2 — Testcontainers~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (confiança nos testes)~~ ✅ |
 | 3.1 — Refresh Token | ALTA | Médio | Alto (UX) |
 | 3.2 — Rate Limiting | ALTA | Baixo | Alto (segurança) |
 | 3.3 — JWT Blacklist | MÉDIA | Baixo | Médio (segurança) |
@@ -255,4 +226,4 @@ fun listUsers pageable: Pageable): ResponseEntity<Page<UserResponse>>
 ---
 
  **Atualizado:** 2026-07-16
- **Próxima revisão:** Após implementação da Fase 2
+ **Próxima revisão:** Após implementação da Fase 5 (Role Security)
