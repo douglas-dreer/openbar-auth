@@ -1,0 +1,27 @@
+# Build
+target/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.yml
