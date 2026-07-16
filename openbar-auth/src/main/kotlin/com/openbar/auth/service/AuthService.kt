@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service
 class AuthService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val jwtTokenProvider: JwtTokenProvider
+    private val jwtTokenProvider: JwtTokenProvider,
+    private val refreshTokenService: RefreshTokenService
 ) {
 
     fun login(request: LoginRequest): LoginResponse {
@@ -24,10 +25,17 @@ class AuthService(
         require(passwordEncoder.matches(request.password, user.passwordHash)) { "Invalid username or password" }
 
         val token = jwtTokenProvider.generateToken(user)
+        val refreshToken = refreshTokenService.createRefreshToken(user)
 
         return LoginResponse(
             accessToken = token,
-            expiresIn = jwtTokenProvider.getExpirationMs() / 1000
+            refreshToken = refreshToken.token!!,
+            expiresIn = jwtTokenProvider.getExpirationMs() / 1000,
+            refreshExpiresAt = refreshToken.expiresAt
         )
+    }
+
+    fun logout(refreshToken: java.util.UUID) {
+        refreshTokenService.revokeRefreshToken(refreshToken)
     }
 }
