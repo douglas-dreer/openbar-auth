@@ -41,7 +41,7 @@
 | Sem rate limiting | Vulnerável a brute force no login | Adicionar RateLimiter |
 | Sem auditoria de login | Não sabe quem logou quando | Adicionar AuditLog |
 | JWT não pode ser revogado | Token roubado fica válido até expirar | Blacklist no Redis |
-| Sem role-based security | Qualquer user autenticado acessa tudo | Method security |
+| ~~Sem role-based security~~ | ~~Qualquer user autenticado acessa tudo~~ | ✅ Resolvido (Method security + @PreAuthorize) |
 | Sem multi-tenancy | Não suporta múltiplas filiais | TenantInterceptor |
 
 ---
@@ -128,22 +128,17 @@
 
 ---
 
-### Fase 5 — Role-Based Security (Prioridade: MÉDIA)
+### ~~Fase 5 — Role-Based Security (Prioridade: MÉDIA)~~ ✅ CONCLUÍDA
 
-**Motivo:** Controle de acesso granular.
+**Objetivo:** Controle de acesso granular.
 
-**Implementação:**
-```kotlin
-// Exemplo: só ADMIN pode criar usuários
-@PostMapping
-@PreAuthorize("hasRole('ADMIN')")
-fun createUser(@RequestBody request: CreateUserRequest): ResponseEntity<UserResponse>
-
-// Exemplo: ADMIN e MANAGER podem listar usuários
-@GetMapping
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-fun listUsers pageable: Pageable): ResponseEntity<Page<UserResponse>>
-```
+**Implementado:**
+- SecurityFilterChain stateless + JWT filter
+- @EnableMethodSecurity + @PreAuthorize nos controllers
+- CustomPermissionEvaluator para acesso "own profile"
+- JwtAuthenticationEntryPoint (401 RFC 7807)
+- UserIdPrincipal para representar usuario autenticado
+- SecurityIntegrationTest (6 testes de autorizacao)
 
 **Mudanças necessárias:**
 - Habilitar `@EnableMethodSecurity` no SecurityConfig
@@ -198,7 +193,7 @@ fun listUsers pageable: Pageable): ResponseEntity<Page<UserResponse>>
 | 3.2 — Rate Limiting | ALTA | Baixo | Alto (segurança) |
 | 3.3 — JWT Blacklist | MÉDIA | Baixo | Médio (segurança) |
 | 4.1 — Audit Log | MÉDIA | Médio | Médio (compliance) |
-| 5 — Role Security | MÉDIA | Médio | Alto (controle de acesso) |
+| ~~5 — Role Security~~ | ~~MÉDIA~~ | ~~Médio~~ | ~~Alto (controle de acesso)~~ ✅ |
 | 6 — Multi-Tenancy | BAIXA | Alto | Alto (escala) |
 | 7 — Observabilidade | BAIXA | Médio | Médio (operações) |
 
@@ -226,4 +221,4 @@ fun listUsers pageable: Pageable): ResponseEntity<Page<UserResponse>>
 ---
 
  **Atualizado:** 2026-07-16
- **Próxima revisão:** Após implementação da Fase 5 (Role Security)
+ **Próxima revisão:** Após implementação da Fase 3.1 (Refresh Token)
