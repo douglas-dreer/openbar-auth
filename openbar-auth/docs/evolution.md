@@ -1,0 +1,258 @@
+# Evolution - openbar-auth
+
+ documento interno de evolução do microsserviço `openbar-auth`.
+ Atualizado conforme decisões de开发quipe.
+
+ **Versão atual:** 0.1.0
+
+---
+
+## Status Atual
+
+### Implementado (v0.1.0)
+
+| Componente | Status |
+|---|---|
+| User entity (UUID, username, passwordHash, role, active) | ✅ |
+| UserRole enum (ADMIN, MANAGER, WAITER, CASHIER, KITCHEN) | ✅ |
+| UserRepository (Spring Data JPA) | ✅ |
+| AuthService (login, JWT generation) | ✅ |
+| UserService (CRUD, soft delete) | ✅ |
+| AuthController (POST /login) | ✅ |
+| UserController (GET, POST, PUT, DELETE) | ✅ |
+| JwtTokenProvider (RS256, JJWT 0.12.6) | ✅ |
+| BCrypt (strength=12) | ✅ |
+| Flyway migration (V1__create_users_table) | ✅ |
+| GlobalExceptionHandler (RFC 7807 Problem Details) | ✅ |
+| Swagger/OpenAPI (springdoc-openapi) | ✅ |
+| Spring Actuator (health, info) | ✅ |
+| 42 testes (unit + controller + repository) | ✅ |
+| CI/CD Pipeline (GitHub Actions) | ✅ |
+| SonarQube integration (94.4% coverage) | ✅ |
+| Docker multi-stage build | ✅ |
+| Postman collection (11 requests) | ✅ |
+
+### Limitações Conhecidas
+
+| Limitação | Impacto | Solução |
+|---|---|---|
+| Testes usam H2 (não PostgreSQL) | Não testa SQL específico do PG | Migration para Testcontainers |
+| Sem refresh token | Usuário precisa logar novamente a cada 1h | Adicionar refresh token |
+| Sem rate limiting | Vulnerável a brute force no login | Adicionar RateLimiter |
+| Sem auditoria de login | Não sabe quem logou quando | Adicionar AuditLog |
+| JWT não pode ser revogado | Token roubado fica válido até expirar | Blacklist no Redis |
+| Sem role-based security | Qualquer user autenticado acessa tudo | Method security |
+| Sem multi-tenancy | Não suporta múltiplas filiais | TenantInterceptor |
+
+---
+
+## Roadmap de Evolução
+
+### Fase 2 — Integração com PostgreSQL (Prioridade: ALTA)
+
+**Objetivo:** Testar contra o mesmo banco usado em produção.
+
+**Tarefa:** Migration de H2 para Testcontainers
+
+```kotlin
+// build.gradle.kts - adicionar dependências
+testImplementation("org.testcontainers:testcontainers:1.19.8")
+testImplementation("org.testcontainers:junit-jupiter:1.19.8")
+testImplementation("org.testcontainers:postgresql:1.19.8")
+```
+
+**Arquivo:** `src/test/resources/application-test.yml`
+```yaml
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16:///openbar_auth
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+```
+
+**Mudanças necessárias:**
+- Remover H2 do `build.gradle.kts` (testImplementation)
+- Adicionar Testcontainers
+- Criar `application-test.yml` com configuração TC
+- Atualizar testes de repositório para usar `@ActiveProfiles("test")`
+- Adicionar `testcontainers.properties` no resources
+
+**Critério de aceite:**
+- Todos os 42 testes passam com PostgreSQL via Testcontainers
+- CI Pipeline usa Docker (já usa para build, precisa para testes)
+- Coverage mantido > 90%
+
+---
+
+### Fase 3 — Segurança e JWT (Prioridade: ALTA)
+
+#### 3.1 Refresh Token
+
+**Motivo:** Tokens de 1h forçam login frequente. Refresh token permite sessão longa com renovação segura.
+
+**Implementação:**
+- Novo endpoint: `POST /api/v1/auth/refresh`
+- Refresh token armazenado no Redis (TTL 7 dias)
+- Response inclui `accessToken` + `refreshToken`
+- Refresh token é UUID, não JWT
+
+**Arquivos a criar:**
+- `RefreshTokenService.kt`
+- `RefreshTokenRepository.kt` (Redis)
+- `RefreshTokenResponse.kt` (DTO)
+- Migration: `V2__create_refresh_tokens_table.sql` (ou Redis)
+
+#### 3.2 Rate Limiting no Login
+
+**Motivo:** Proteção contra brute force.
+
+**Implementação:**
+- Spring Boot + Redis + Bucket4j
+- Limite: 5 tentativas/minuto por IP
+- Response 429 Too Many Requests
+
+**Arquivos a criar:**
+- `RateLimitConfig.kt`
+- `RateLimitFilter.kt`
+
+#### 3.3 JWT Blacklist (Revogação)
+
+**Motivo:** Logout efetivo e revogação de tokens comprometidos.
+
+**Implementação:**
+- Ao fazer logout, adicionar JWT ID (jti) no Redis com TTL = tempo restante do token
+- JwtTokenProvider verifica blacklist antes de validar
+
+**Arquivos a modificar:**
+- `JwtTokenProvider.kt` — adicionar verificação de blacklist
+- `AuthService.kt` — adicionar logout
+
+---
+
+### Fase 4 — Auditoria e Logging (Prioridade: MÉDIA)
+
+#### 4.1 Audit Log
+
+**Motivo:** Rastreabilidade de ações sensíveis.
+
+**Implementação:**
+- Nova entidade: `AuditLog` (id, userId, action, details, timestamp, ip)
+- Interceptor ou AOP para gravar ações
+- Endpoints: `GET /api/v1/auth/audit-logs` (apenas ADMIN)
+
+**Migration:** `V3__create_audit_logs_table.sql`
+
+#### 4.2 Estrutura de Logs
+
+**Motivo:** Observabilidade em produção.
+
+**Implementação:**
+- Logback com JSON format (ELK/Datadog compatible)
+- Request ID em todas as respostas
+- Slow query logging (> 500ms)
+
+---
+
+### Fase 5 — Role-Based Security (Prioridade: MÉDIA)
+
+**Motivo:** Controle de acesso granular.
+
+**Implementação:**
+```kotlin
+// Exemplo: só ADMIN pode criar usuários
+@PostMapping
+@PreAuthorize("hasRole('ADMIN')")
+fun createUser(@RequestBody request: CreateUserRequest): ResponseEntity<UserResponse>
+
+// Exemplo: ADMIN e MANAGER podem listar usuários
+@GetMapping
+@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+fun listUsers pageable: Pageable): ResponseEntity<Page<UserResponse>>
+```
+
+**Mudanças necessárias:**
+- Habilitar `@EnableMethodSecurity` no SecurityConfig
+- Adicionar `@PreAuthorize` nos controllers
+- Custom PermissionEvaluator se necessário
+
+**Endpoint → Role mapping:**
+
+| Endpoint | Roles Permitidas |
+|---|---|
+| POST /login | ALL |
+| GET /users | ADMIN, MANAGER |
+| GET /users/{id} | ALL (próprio perfil) ou ADMIN |
+| POST /users | ADMIN |
+| PUT /users/{id} | ALL (próprio perfil) ou ADMIN |
+| DELETE /users/{id} | ADMIN |
+
+---
+
+### Fase 6 — Multi-Tenancy (Prioridade: BAIXA)
+
+**Motivo:** Suporte a múltiplas filiais do OPENBAR.
+
+**Implementação:**
+- Header `X-Tenant-ID` em todas as requisições
+- TenantInterceptor extrai tenant do JWT ou header
+- Flyway migrations por tenant
+- Connection pool por tenant (HikariCP)
+
+**Nota:** Considerar se multi-tenancy será por schema ou por row.
+
+---
+
+### Fase 7 — Performance e Observabilidade (Prioridade: BAIXA)
+
+| Item | Descrição |
+|---|---|
+| Redis Cache | Cache de usernames (evita lookup no DB a cada login) |
+| Connection Pool Tuning | HikariCP metrics + tuning |
+| Micrometer + Prometheus | Métricas de negócio (logins/min, users criados) |
+| Distributed Tracing | OpenTelemetry + Jaeger |
+| Health Checks | Custom indicators (DB, Redis, Kafka) |
+
+---
+
+## Prioridades
+
+| Fase | Prioridade | Esforço | Impacto |
+|---|---|---|---|
+| 2 — Testcontainers | ALTA | Médio | Alto (confiança nos testes) |
+| 3.1 — Refresh Token | ALTA | Médio | Alto (UX) |
+| 3.2 — Rate Limiting | ALTA | Baixo | Alto (segurança) |
+| 3.3 — JWT Blacklist | MÉDIA | Baixo | Médio (segurança) |
+| 4.1 — Audit Log | MÉDIA | Médio | Médio (compliance) |
+| 5 — Role Security | MÉDIA | Médio | Alto (controle de acesso) |
+| 6 — Multi-Tenancy | BAIXA | Alto | Alto (escala) |
+| 7 — Observabilidade | BAIXA | Médio | Médio (operações) |
+
+---
+
+## Decisões Técnicas
+
+| Decisão | Justificativa |
+|---|---|
+| Testcontainers > H2 | H2 não suporta todos os tipos PostgreSQL (JSONB, arrays, etc.) |
+| Refresh token via Redis | Performance > DB para tokens temporários |
+| Bucket4j para rate limiting | Integração nativa com Spring Boot + Redis |
+| Method security > Filter | Mais granular, harder to bypass, padrão Spring |
+| Multi-tenancy por row | Mais simples que por schema, suficiente para poucas filiais |
+
+---
+
+## Referências
+
+- [Spring Authorization Server](https://spring.io/projects/spring-authorization-server)
+- [Testcontainers](https://www.testcontainers.org/)
+- [Bucket4j](https://github.com/bucket4j/bucket4j)
+- [Spring Security Method Security](https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html)
+
+---
+
+ **Atualizado:** 2026-07-16
+ **Próxima revisão:** Após implementação da Fase 2
