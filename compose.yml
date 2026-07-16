@@ -1,0 +1,259 @@
+services:
+  # ============================================
+  # Infrastructure Services
+  # ============================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: openbar-postgres
+    environment:
+      POSTGRES_DB: openbar_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openbar-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: openbar-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openbar-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: openbar-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - openbar-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: openbar-kafka
+    depends_on:
+      zookeeper:
+        condition: service_started
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openbar-net
+
+  # ============================================
+  # Application Services
+  # ============================================
+
+  openbar-auth:
+    build:
+      context: .
+      dockerfile: openbar-auth/Dockerfile
+    container_name: openbar-auth
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: openbar_auth
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-myDefaultSecretKeyForDevelopmentOnlyDoNotUseInProduction2024!}
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    networks:
+      - openbar-net
+
+  # ============================================
+  # Placeholder Services (future implementation)
+  # ============================================
+
+  openbar-waiter:
+    image: openbar-waiter:latest
+    container_name: openbar-waiter
+    build:
+      context: .
+      dockerfile: openbar-waiter/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: openbar_waiter
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-myDefaultSecretKeyForDevelopmentOnlyDoNotUseInProduction2024!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openbar-net
+    profiles:
+      - all
+
+  openbar-kitchen:
+    image: openbar-kitchen:latest
+    container_name: openbar-kitchen
+    build:
+      context: .
+      dockerfile: openbar-kitchen/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: openbar_kitchen
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-myDefaultSecretKeyForDevelopmentOnlyDoNotUseInProduction2024!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openbar-net
+    profiles:
+      - all
+
+  openbar-counter:
+    image: openbar-counter:latest
+    container_name: openbar-counter
+    build:
+      context: .
+      dockerfile: openbar-counter/Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: openbar_counter
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-myDefaultSecretKeyForDevelopmentOnlyDoNotUseInProduction2024!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openbar-net
+    profiles:
+      - all
+
+  openbar-pdv:
+    image: openbar-pdv:latest
+    container_name: openbar-pdv
+    build:
+      context: .
+      dockerfile: openbar-pdv/Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: openbar_pdv
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-myDefaultSecretKeyForDevelopmentOnlyDoNotUseInProduction2024!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openbar-net
+    profiles:
+      - all
+
+  openbar-finances:
+    image: openbar-finances:latest
+    container_name: openbar-finances
+    build:
+      context: .
+      dockerfile: openbar-finances/Dockerfile
+    ports:
+      - "8086:8086"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: openbar_finances
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-myDefaultSecretKeyForDevelopmentOnlyDoNotUseInProduction2024!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openbar-net
+    profiles:
+      - all
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  openbar-net:
+    driver: bridge

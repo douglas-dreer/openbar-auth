@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md", "documentation/project.md"],
+  "agent": {
+    "architect": {
+      "mode": "subagent",
+      "description": "Architect for OPENBAR. Scaffolds services, designs Gradle builds, defines API contracts, and coordinates cross-service architecture."
+    },
+    "backend": {
+      "mode": "subagent",
+      "description": "Backend developer for OPENBAR. Implements Kotlin/Spring Boot services, REST controllers, business logic, Kafka producers/consumers, and repository layers."
+    },
+    "data": {
+      "mode": "subagent",
+      "description": "Data engineer for OPENBAR. Manages database schemas, Flyway migrations, Kafka topic configuration, and Redis data structures."
+    },
+    "devops": {
+      "mode": "subagent",
+      "description": "DevOps engineer for OPENBAR. Manages Docker, Docker Compose, CI/CD, infrastructure services (Kafka, Redis, PostgreSQL), and deployment configs."
+    }
+  }
+}

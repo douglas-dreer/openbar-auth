@@ -1,0 +1,39 @@
+# Build outputs
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!openbar-auth/docs/*.md
+
+# Environment files
+.env
+.env.local
+.env-exemple
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files (don't copy into context)
+compose.yml
+**/Dockerfile
+
+# Test files
+**/src/test/
