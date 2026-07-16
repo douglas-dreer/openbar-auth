@@ -1,0 +1,192 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+
+env:
+  JAVA_VERSION: '21'
+  GRADLE_VERSION: '8.14'
+
+jobs:
+  # ============================================
+  # Job 1: Build & Test
+  # ============================================
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/build/reports/tests/test/'
+          retention-days: 7
+
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: '**/build/libs/*.jar'
+          retention-days: 7
+
+  # ============================================
+  # Job 2: Code Quality (SonarQube)
+  # ============================================
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with tests (for coverage)
+        run: ./gradlew build
+
+      - name: SonarQube Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./gradlew sonar \
+            -Dsonar.host.url=${{ secrets.SONAR_URL }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+            -Dsonar.qualitygate.wait=true
+
+      - name: SonarQube Quality Gate Check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+
+      - name: Fail if Quality Gate not passed
+        if: steps.sonarqube-quality-gate-check.outcome == 'failure'
+        run: exit 1
+
+  # ============================================
+  # Job 3: Docker Build
+  # ============================================
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker images
+        run: |
+          docker build -f openbar-auth/Dockerfile -t openbar-auth:latest .
+          docker build -f openbar-auth/Dockerfile -t openbar-auth:${{ github.sha }} .
+
+      - name: Test Docker image
+        run: |
+          docker run -d --name test-auth \
+            -p 8081:8081 \
+            -e DB_HOST=host.docker.internal \
+            openbar-auth:latest
+          sleep 10
+          curl -f http://localhost:8081/actuator/health || exit 1
+          docker stop test-auth
+
+  # ============================================
+  # Job 4: Postman Tests
+  # ============================================
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        run: |
+          docker compose up -d postgres redis kafka
+          sleep 30
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run openbar-auth
+        run: ./gradlew :openbar-auth:bootRun &
+        sleep 30
+
+      - name: Run Postman tests
+        uses: matt-ball/newman-action@master
+        with:
+          collection: postman/openbar-auth.postman_collection.json
+          environment: postman/openbar-auth.postman_environment.json
+          reporters: cli
+
+      - name: Docker Compose down
+        if: always()
+        run: docker compose down -v

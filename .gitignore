@@ -17,6 +17,10 @@ build/
 # Environment
 .env
 *.env.local
+openbar-auth/.env
+
+# OpenCode
+.opencode/
 
 # OS
 .DS_Store
@@ -25,3 +29,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# SonarQube
+.sonarlint/

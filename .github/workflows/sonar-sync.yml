@@ -1,0 +1,48 @@
+name: SonarQube Sync
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: 'Force sync all issues'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    name: Sync SonarQube Issues
+    runs-on: ubuntu-latest
+    if: github.repository == 'douglas-dreer/openbar-auth'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync SonarQube issues to GitHub
+        env:
+          SONAR_URL: ${{ secrets.SONAR_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          chmod +x scripts/sonar-to-github-sync.sh
+          ./scripts/sonar-to-github-sync.sh
+
+      - name: Create summary
+        if: success()
+        run: |
+          echo "## SonarQube Sync Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Issues have been synced from SonarQube to GitHub Issues." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**SonarQube Project:** ${{ secrets.SONAR_PROJECT_KEY }}" >> $GITHUB_STEP_SUMMARY
+          echo "**GitHub Repo:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
