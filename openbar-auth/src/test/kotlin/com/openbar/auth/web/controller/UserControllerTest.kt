@@ -2,6 +2,8 @@ package com.openbar.auth.web.controller
 
 import com.openbar.auth.domain.model.UserRole
 import com.openbar.auth.service.UserService
+import com.openbar.auth.web.dto.CreateUserRequest
+import com.openbar.auth.web.dto.UpdateUserRequest
 import com.openbar.auth.web.dto.UserResponse
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Test
@@ -11,10 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.Pageable
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.put
 import java.util.UUID
 
 @WebMvcTest(UserController::class)
@@ -78,6 +82,114 @@ class UserControllerTest {
             .thenThrow(IllegalArgumentException("User not found"))
 
         mockMvc.get("/api/v1/auth/users/$userId") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isBadRequest() }
+        }
+    }
+
+    @Test
+    fun `create should return 201 with created user`() {
+        val userId = UUID.randomUUID()
+        val response = UserResponse(
+            id = userId,
+            username = "new@example.com",
+            role = UserRole.WAITER,
+            active = true
+        )
+
+        whenever(userService.create(any()))
+            .thenReturn(response)
+
+        mockMvc.post("/api/v1/auth/users") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateUserRequest(
+                    username = "new@example.com",
+                    password = "password123",
+                    role = UserRole.WAITER
+                )
+            )
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.username") { value("new@example.com") }
+            jsonPath("$.role") { value("WAITER") }
+        }
+    }
+
+    @Test
+    fun `create should return 400 for invalid request`() {
+        mockMvc.post("/api/v1/auth/users") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf("username" to "", "password" to "12345", "role" to "WAITER")
+            )
+        }.andExpect {
+            status { isBadRequest() }
+        }
+    }
+
+    @Test
+    fun `update should return updated user`() {
+        val userId = UUID.randomUUID()
+        val response = UserResponse(
+            id = userId,
+            username = "updated@example.com",
+            role = UserRole.MANAGER,
+            active = true
+        )
+
+        whenever(userService.update(any(), any()))
+            .thenReturn(response)
+
+        mockMvc.put("/api/v1/auth/users/$userId") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                UpdateUserRequest(
+                    username = "updated@example.com",
+                    role = UserRole.MANAGER,
+                    active = true
+                )
+            )
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.username") { value("updated@example.com") }
+            jsonPath("$.role") { value("MANAGER") }
+        }
+    }
+
+    @Test
+    fun `update should return 400 when user not found`() {
+        val userId = UUID.randomUUID()
+        whenever(userService.update(any(), any()))
+            .thenThrow(IllegalArgumentException("User not found"))
+
+        mockMvc.put("/api/v1/auth/users/$userId") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                UpdateUserRequest(username = "test@example.com", role = UserRole.WAITER, active = true)
+            )
+        }.andExpect {
+            status { isBadRequest() }
+        }
+    }
+
+    @Test
+    fun `delete should return 204`() {
+        mockMvc.delete("/api/v1/auth/users/${UUID.randomUUID()}") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isNoContent() }
+        }
+    }
+
+    @Test
+    fun `delete should return 400 when user not found`() {
+        val userId = UUID.randomUUID()
+        org.mockito.kotlin.whenever(userService.softDelete(userId))
+            .thenThrow(IllegalArgumentException("User not found"))
+
+        mockMvc.delete("/api/v1/auth/users/$userId") {
             contentType = MediaType.APPLICATION_JSON
         }.andExpect {
             status { isBadRequest() }
