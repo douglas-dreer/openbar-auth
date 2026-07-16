@@ -133,3 +133,6 @@ openbar-auth/
 │       └── V1__create_users_table.sql
 └── src/test/                             # 23 testes
 ```
+
+## Branch: develop
+Última atualização: 2026-07-16T17:24:11Z
