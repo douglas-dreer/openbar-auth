@@ -19,13 +19,9 @@ class AuthService(
         val user = userRepository.findByUsername(request.username)
             .orElseThrow { IllegalArgumentException("Invalid username or password") }
 
-        if (!user.active) {
-            throw IllegalArgumentException("Account is deactivated")
-        }
+        require(user.active) { "Account is deactivated" }
 
-        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
-            throw IllegalArgumentException("Invalid username or password")
-        }
+        require(passwordEncoder.matches(request.password, user.passwordHash)) { "Invalid username or password" }
 
         val token = jwtTokenProvider.generateToken(user)
 

@@ -28,9 +28,7 @@ class UserService(
     }
 
     fun create(request: CreateUserRequest): UserResponse {
-        if (userRepository.existsByUsername(request.username)) {
-            throw IllegalArgumentException("Username already exists: ${request.username}")
-        }
+        require(!userRepository.existsByUsername(request.username)) { "Username already exists: ${request.username}" }
 
         val user = User(
             username = request.username,
