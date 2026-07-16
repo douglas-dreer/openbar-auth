@@ -96,22 +96,32 @@ jobs:
         run: ./gradlew build
 
       - name: SonarQube Scan
-        if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ./gradlew :openbar-auth:sonar \
             -Dsonar.host.url=${{ secrets.SONAR_URL }} \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.qualitygate.wait=true
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
         continue-on-error: true
 
-      - name: SonarQube Quality Gate Check
-        if: ${{ env.SONAR_TOKEN != '' }}
-        uses: sonarsource/sonarqube-scan-action@master
+      - name: SonarQube Quality Gate
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+              "${{ secrets.SONAR_URL }}/api/qualitygates/project_status?projectKey=${{ secrets.SONAR_PROJECT_KEY }}" \
+              | jq -r '.projectStatus.status')
+            if [ "$STATUS" = "OK" ] || [ "$STATUS" = "ERROR" ]; then
+              echo "Quality Gate: $STATUS"
+              if [ "$STATUS" = "ERROR" ]; then exit 1; fi
+              exit 0
+            fi
+            echo "Waiting for analysis... ($i/30)"
+            sleep 10
+          done
+          echo "Timeout waiting for Quality Gate"
+          exit 1
         continue-on-error: true
 
   # ============================================
