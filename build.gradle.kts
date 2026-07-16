@@ -4,8 +4,7 @@ plugins {
     kotlin("plugin.jpa") version "2.1.10" apply false
     id("org.springframework.boot") version "3.4.7" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
-    id("org.sonarqube") version "6.0.1.4628" apply false
-    id("jacoco") apply false
+    id("org.sonarqube") version "7.3.1.8318" apply false
 }
 
 allprojects {
@@ -47,10 +46,6 @@ subprojects {
     tasks.withType<Test> {
         useJUnitPlatform()
         finalizedBy("jacocoTestReport")
-    }
-
-    jacoco {
-        toolVersion = "0.8.12"
     }
 
     tasks.named<JacocoReport>("jacocoTestReport") {
