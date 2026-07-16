@@ -1,0 +1,245 @@
+name: Release Prepare
+
+on:
+  push:
+    branches:
+      - 'release/v*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  REPO: ${{ github.repository }}
+
+jobs:
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from branch name
+        id: version
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          VERSION="${BRANCH#release/v}"
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: $VERSION (expected X.Y.Z)"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "### Release Version: \`v$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update build.gradle.kts version
+        id: build-update
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUILD_FILE="build.gradle.kts"
+
+          if [ ! -f "$BUILD_FILE" ]; then
+            echo "::error::build.gradle.kts not found"
+            exit 1
+          fi
+
+          OLD_VERSION=$(grep -oP 'version\s*=\s*"\K[^"]+' "$BUILD_FILE" | head -1)
+
+          if [ "$OLD_VERSION" = "$VERSION" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "build.gradle.kts: version already set to $VERSION" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          sed -i "s/version = \"$OLD_VERSION\"/version = \"$VERSION\"/" "$BUILD_FILE"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "#### build.gradle.kts" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`$OLD_VERSION\` → \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update CHANGELOG.md
+        id: changelog-update
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TODAY=$(date +%Y-%m-%d)
+          CHANGELOG="CHANGELOG.md"
+
+          if [ ! -f "$CHANGELOG" ]; then
+            cat > "$CHANGELOG" <<EOF
+          # Changelog
+
+          Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
+
+          O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+          e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
+
+          ## [$VERSION] - $TODAY
+
+          ### Added
+
+          - Initial release
+
+          [$VERSION]: https://github.com/$REPO/releases/tag/v${VERSION}
+          EOF
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "#### CHANGELOG.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Created with initial section \`[$VERSION] - $TODAY\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if grep -q "^## \[Unreleased\]" "$CHANGELOG"; then
+            sed -i "s/^## \[Unreleased\]/## [$VERSION] - $TODAY/" "$CHANGELOG"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "#### CHANGELOG.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "- \`[Unreleased]\` → \`[$VERSION] - $TODAY\`" >> "$GITHUB_STEP_SUMMARY"
+          elif grep -q "^## \[$VERSION\]$" "$CHANGELOG"; then
+            sed -i "s/^## \[$VERSION\]$/## [$VERSION] - $TODAY/" "$CHANGELOG"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "#### CHANGELOG.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Added date to existing section \`[$VERSION]\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "#### CHANGELOG.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "- No \`\[Unreleased\]\` section found, skipping" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if ! grep -q "\[$VERSION\]: https://github.com" "$CHANGELOG"; then
+            echo "" >> "$CHANGELOG"
+            echo "[$VERSION]: https://github.com/$REPO/releases/tag/v${VERSION}" >> "$CHANGELOG"
+          fi
+
+      - name: Update README.md version references
+        id: readme-update
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          README="README.md"
+
+          if [ ! -f "$README" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "#### README.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "- File not found, skipping" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          OLD_REFS=$(grep -oP 'v[0-9]+\.[0-9]+\.[0-9]+' "$README" | sort -u | head -1)
+
+          if [ -z "$OLD_REFS" ] || [ "$OLD_REFS" = "v$VERSION" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "#### README.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "- No version references to update" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          sed -i "s/$OLD_REFS/v$VERSION/g" "$README"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "#### README.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`$OLD_REFS\` → \`v$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update service READMEs
+        id: service-readmes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CHANGED="false"
+
+          for dir in openbar-auth openbar-waiter openbar-kitchen openbar-counter openbar-pdv openbar-finances; do
+            README="$dir/docs/README.md"
+            if [ -f "$README" ]; then
+              OLD_VER=$(grep -oP 'v[0-9]+\.[0-9]+\.[0-9]+' "$README" | head -1)
+              if [ -n "$OLD_VER" ] && [ "$OLD_VER" != "v$VERSION" ]; then
+                sed -i "s/$OLD_VER/v$VERSION/g" "$README"
+                echo "Updated $README: $OLD_VER → v$VERSION" >> "$GITHUB_STEP_SUMMARY"
+                CHANGED="true"
+              fi
+            fi
+          done
+
+          if [ "$CHANGED" = "false" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push changes
+        id: commit
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CHANGES=$(git diff --stat)
+
+          if [ -z "$CHANGES" ]; then
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "### Result" >> "$GITHUB_STEP_SUMMARY"
+            echo "No changes needed — version was already set." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add build.gradle.kts CHANGELOG.md README.md
+          git add -u openbar-auth/docs/README.md openbar-waiter/docs/README.md \
+            openbar-kitchen/docs/README.md openbar-counter/docs/README.md \
+            openbar-pdv/docs/README.md openbar-finances/docs/README.md 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "### Result" >> "$GITHUB_STEP_SUMMARY"
+            echo "No staged changes after filtering." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git commit -m "chore/0${{ github.run_number }}_release_v${VERSION}_prepare"
+          git push
+
+          echo "no_changes=false" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "Changes committed and pushed to \`$GITHUB_REF_NAME\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Find and comment on PR
+        if: steps.commit.outputs.no_changes == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PR_NUMBER=$(gh pr list \
+            --head "$GITHUB_REF_NAME" \
+            --state open \
+            --json number \
+            --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "### PR" >> "$GITHUB_STEP_SUMMARY"
+            echo "No open PR found for \`$GITHUB_REF_NAME\`." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          gh pr comment "$PR_NUMBER" --body \
+            "## Release v${VERSION} Preparation
+
+          Files updated:
+          - \`build.gradle.kts\` — version set to \`${VERSION}\`
+          - \`CHANGELOG.md\` — \`[Unreleased]\` → \`[${VERSION}] - $(date +%Y-%m-%d)\`
+          - \`README.md\` — version references updated
+          - Service READMEs — version references updated
+
+          ### Next Steps
+          1. Review the changes in this PR
+          2. Merge into \`develop\`
+          3. Merge \`develop\` into \`main\`
+          4. Push a tag: \`git tag v${VERSION} && git push origin v${VERSION}\`
+          5. The \`release.yml\` workflow will create the GitHub Release automatically"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### PR" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commented on PR #${PR_NUMBER} with release instructions." >> "$GITHUB_STEP_SUMMARY"
