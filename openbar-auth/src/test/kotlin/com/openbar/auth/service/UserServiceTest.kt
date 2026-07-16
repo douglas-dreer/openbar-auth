@@ -146,4 +146,90 @@ class UserServiceTest {
 
         org.mockito.kotlin.verify(userRepository).save(any())
     }
+
+    @Test
+    fun `softDelete should throw when user not found`() {
+        val userId = UUID.randomUUID()
+        whenever(userRepository.findById(userId))
+            .thenReturn(Optional.empty())
+
+        assertThrows<IllegalArgumentException> {
+            userService.softDelete(userId)
+        }
+    }
+
+    @Test
+    fun `update should modify user fields`() {
+        val userId = UUID.randomUUID()
+        val user = User(
+            id = userId,
+            username = "old@example.com",
+            passwordHash = "\$2a\$12\$hashedPassword",
+            role = UserRole.WAITER,
+            active = true
+        )
+
+        whenever(userRepository.findById(userId))
+            .thenReturn(Optional.of(user))
+        whenever(userRepository.save(any()))
+            .thenAnswer { it.arguments[0] }
+
+        val request = com.openbar.auth.web.dto.UpdateUserRequest(
+            username = "new@example.com",
+            role = UserRole.MANAGER,
+            active = false
+        )
+
+        val result = userService.update(userId, request)
+
+        assertEquals("new@example.com", result.username)
+        assertEquals(UserRole.MANAGER, result.role)
+        assertFalse(result.active)
+    }
+
+    @Test
+    fun `update should keep original values when request fields are null`() {
+        val userId = UUID.randomUUID()
+        val user = User(
+            id = userId,
+            username = "keep@example.com",
+            passwordHash = "\$2a\$12\$hashedPassword",
+            role = UserRole.CASHIER,
+            active = true
+        )
+
+        whenever(userRepository.findById(userId))
+            .thenReturn(Optional.of(user))
+        whenever(userRepository.save(any()))
+            .thenAnswer { it.arguments[0] }
+
+        val request = com.openbar.auth.web.dto.UpdateUserRequest(
+            username = null,
+            role = null,
+            active = null
+        )
+
+        val result = userService.update(userId, request)
+
+        assertEquals("keep@example.com", result.username)
+        assertEquals(UserRole.CASHIER, result.role)
+        assertTrue(result.active)
+    }
+
+    @Test
+    fun `update should throw when user not found`() {
+        val userId = UUID.randomUUID()
+        whenever(userRepository.findById(userId))
+            .thenReturn(Optional.empty())
+
+        val request = com.openbar.auth.web.dto.UpdateUserRequest(
+            username = "new@example.com",
+            role = UserRole.WAITER,
+            active = true
+        )
+
+        assertThrows<IllegalArgumentException> {
+            userService.update(userId, request)
+        }
+    }
 }
