@@ -100,10 +100,9 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          ./gradlew sonar \
+          ./gradlew :openbar-auth:sonar \
             -Dsonar.host.url=${{ secrets.SONAR_URL }} \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
             -Dsonar.qualitygate.wait=true
         continue-on-error: true
 
