@@ -177,8 +177,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run openbar-auth
-        run: ./gradlew :openbar-auth:bootRun &
-        sleep 30
+        run: |
+          ./gradlew :openbar-auth:bootRun &
+          sleep 30
 
       - name: Run Postman tests
         uses: matt-ball/newman-action@master
