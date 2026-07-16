@@ -19,8 +19,13 @@ build/
 *.env.local
 openbar-auth/.env
 
-# OpenCode
+# AI Tools
 .opencode/
+opencode.json
+.claude/
+.crush/
+.mimocode/
+graphify-out/
 
 # OS
 .DS_Store
