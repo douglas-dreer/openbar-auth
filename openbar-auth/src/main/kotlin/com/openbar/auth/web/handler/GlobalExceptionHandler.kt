@@ -41,7 +41,7 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleGeneral(ex: Exception): ResponseEntity<ProblemDetail> {
+    fun handleGeneral(@Suppress("UNUSED_PARAMETER") ex: Exception): ResponseEntity<ProblemDetail> {
         val problem = ProblemDetail(
             type = URI("about:blank"),
             title = "Internal Server Error",

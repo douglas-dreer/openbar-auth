@@ -9,7 +9,7 @@ plugins {
 
 allprojects {
     group = "com.openbar"
-    version = "0.0.1-SNAPSHOT"
+    version = "0.1.0"
 
     repositories {
         mavenCentral()
@@ -50,5 +50,24 @@ subprojects {
 
     tasks.named<JacocoReport>("jacocoTestReport") {
         dependsOn("test")
+        reports {
+            xml.required.set(true)
+        }
+    }
+
+    the<org.sonarqube.gradle.SonarExtension>().apply {
+        properties {
+            property("sonar.projectKey", "ob-${project.name}")
+            property("sonar.projectName", "OPENBAR ${project.name.removePrefix("openbar-").replaceFirstChar { it.uppercase() }}")
+            property("sonar.sources", "src/main/kotlin")
+            property("sonar.tests", "src/test/kotlin")
+            property("sonar.java.source", "21")
+            property("sonar.kotlin.source", "src/main/kotlin")
+            property("sonar.kotlin.test", "src/test/kotlin")
+            property("sonar.junit.reportPaths", "build/test-results/test/")
+            property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+            property("sonar.exclusions", "**/build/**,**/node_modules/**,**/.gradle/**")
+            property("sonar.coverage.exclusions", "**/test/**,**/*Test.kt,**/*Tests.kt,**/config/**")
+        }
     }
 }
