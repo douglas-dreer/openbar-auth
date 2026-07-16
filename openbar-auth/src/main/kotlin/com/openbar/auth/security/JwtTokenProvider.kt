@@ -1,8 +1,10 @@
 package com.openbar.auth.security
 
 import com.openbar.auth.domain.model.User
-import io.jsonwebtoken.*
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.security.Keys
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.util.Date
@@ -17,6 +19,8 @@ class JwtTokenProvider(
     @Value("\${jwt.expiration}")
     private val expirationMs: Long
 ) {
+
+    private val log = LoggerFactory.getLogger(JwtTokenProvider::class.java)
 
     private val key: SecretKey by lazy {
         Keys.hmacShaKeyFor(secret.toByteArray())
@@ -69,8 +73,10 @@ class JwtTokenProvider(
                 .parseSignedClaims(token)
             true
         } catch (e: JwtException) {
+            log.debug("Invalid JWT token: ${e.message}")
             false
         } catch (e: IllegalArgumentException) {
+            log.debug("Invalid JWT token: ${e.message}")
             false
         }
     }

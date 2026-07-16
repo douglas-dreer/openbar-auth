@@ -8,8 +8,12 @@ import org.springframework.security.crypto.password.PasswordEncoder
 @Configuration
 class SecurityConfig {
 
+    companion object {
+        private const val BCRYPT_STRENGTH = 12
+    }
+
     @Bean
     fun passwordEncoder(): PasswordEncoder {
-        return BCryptPasswordEncoder(12)
+        return BCryptPasswordEncoder(BCRYPT_STRENGTH)
     }
 }

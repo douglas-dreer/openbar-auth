@@ -1,3 +1,5 @@
+@file:Suppress("SpreadOperator")
+
 package com.openbar.auth
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
