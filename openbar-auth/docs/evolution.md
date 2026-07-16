@@ -37,7 +37,7 @@
 | Limitação | Impacto | Solução |
 |---|---|---|
 | ~~Testes usam H2 (não PostgreSQL)~~ | ~~Não testa SQL específico do PG~~ | ✅ Resolvido (PostgreSQL 16 real) |
-| Sem refresh token | Usuário precisa logar novamente a cada 1h | Adicionar refresh token |
+| ~~Sem refresh token~~ | ~~Usuário precisa logar novamente a cada 1h~~ | ✅ Resolvido (Refresh token PostgreSQL, TTL 7 dias) |
 | Sem rate limiting | Vulnerável a brute force no login | Adicionar RateLimiter |
 | Sem auditoria de login | Não sabe quem logou quando | Adicionar AuditLog |
 | JWT não pode ser revogado | Token roubado fica válido até expirar | Blacklist no Redis |
@@ -61,9 +61,9 @@
 
 ### Fase 3 — Segurança e JWT (Prioridade: ALTA)
 
-#### 3.1 Refresh Token
+#### ~~3.1 Refresh Token~~ ✅ CONCLUÍDA
 
-**Motivo:** Tokens de 1h forçam login frequente. Refresh token permite sessão longa com renovação segura.
+**Implementado:** PostgreSQL storage, UUID token, TTL 7 dias, rotacao no refresh.
 
 **Implementação:**
 - Novo endpoint: `POST /api/v1/auth/refresh`
@@ -189,7 +189,7 @@
 | Fase | Prioridade | Esforço | Impacto |
 |---|---|---|---|
 | ~~2 — Testcontainers~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (confiança nos testes)~~ ✅ |
-| 3.1 — Refresh Token | ALTA | Médio | Alto (UX) |
+| ~~3.1 — Refresh Token~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (UX)~~ ✅ |
 | 3.2 — Rate Limiting | ALTA | Baixo | Alto (segurança) |
 | 3.3 — JWT Blacklist | MÉDIA | Baixo | Médio (segurança) |
 | 4.1 — Audit Log | MÉDIA | Médio | Médio (compliance) |
