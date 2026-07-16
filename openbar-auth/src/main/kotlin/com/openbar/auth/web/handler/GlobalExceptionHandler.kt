@@ -2,6 +2,7 @@ package com.openbar.auth.web.handler
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -38,6 +39,18 @@ class GlobalExceptionHandler {
             instance = URI("/api/v1/auth")
         )
         return ResponseEntity.badRequest().body(problem)
+    }
+
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(@Suppress("UNUSED_PARAMETER") ex: AccessDeniedException): ResponseEntity<ProblemDetail> {
+        val problem = ProblemDetail(
+            type = URI("about:blank"),
+            title = "Forbidden",
+            status = HttpStatus.FORBIDDEN.value(),
+            detail = "You don't have permission to access this resource",
+            instance = URI("/api/v1/auth")
+        )
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem)
     }
 
     @ExceptionHandler(Exception::class)

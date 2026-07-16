@@ -1,5 +1,9 @@
 package com.openbar.auth.web.controller
 
+import com.openbar.auth.config.CustomPermissionEvaluator
+import com.openbar.auth.security.JwtAuthenticationEntryPoint
+import com.openbar.auth.security.JwtAuthenticationFilter
+import com.openbar.auth.security.JwtTokenProvider
 import com.openbar.auth.service.AuthService
 import com.openbar.auth.web.dto.LoginRequest
 import com.openbar.auth.web.dto.LoginResponse
@@ -8,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.http.MediaType
@@ -15,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 
 @WebMvcTest(AuthController::class)
+@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
     @Autowired
@@ -22,6 +28,18 @@ class AuthControllerTest {
 
     @MockitoBean
     lateinit var authService: AuthService
+
+    @MockitoBean
+    lateinit var jwtTokenProvider: JwtTokenProvider
+
+    @MockitoBean
+    lateinit var jwtAuthenticationFilter: JwtAuthenticationFilter
+
+    @MockitoBean
+    lateinit var jwtAuthenticationEntryPoint: JwtAuthenticationEntryPoint
+
+    @MockitoBean
+    lateinit var customPermissionEvaluator: CustomPermissionEvaluator
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
