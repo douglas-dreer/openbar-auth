@@ -1,5 +1,6 @@
 package com.openbar.auth.service
 
+import com.openbar.auth.domain.model.RefreshToken
 import com.openbar.auth.domain.model.User
 import com.openbar.auth.domain.model.UserRole
 import com.openbar.auth.domain.repository.UserRepository
@@ -13,6 +14,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.security.crypto.password.PasswordEncoder
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 
@@ -21,6 +23,7 @@ class AuthServiceTest {
     private lateinit var userRepository: UserRepository
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var jwtTokenProvider: JwtTokenProvider
+    private lateinit var refreshTokenService: RefreshTokenService
     private lateinit var authService: AuthService
 
     @BeforeEach
@@ -28,7 +31,8 @@ class AuthServiceTest {
         userRepository = mock()
         passwordEncoder = mock()
         jwtTokenProvider = mock()
-        authService = AuthService(userRepository, passwordEncoder, jwtTokenProvider)
+        refreshTokenService = mock()
+        authService = AuthService(userRepository, passwordEncoder, jwtTokenProvider, refreshTokenService)
     }
 
     @Test
@@ -42,6 +46,13 @@ class AuthServiceTest {
             active = true
         )
 
+        val refreshToken = RefreshToken(
+            id = UUID.randomUUID(),
+            token = UUID.randomUUID(),
+            user = user,
+            expiresAt = Instant.now().plusMillis(604800000)
+        )
+
         whenever(userRepository.findByUsername("admin@example.com"))
             .thenReturn(Optional.of(user))
         whenever(passwordEncoder.matches("password123", user.passwordHash))
@@ -50,12 +61,16 @@ class AuthServiceTest {
             .thenReturn("mock-jwt-token")
         whenever(jwtTokenProvider.getExpirationMs())
             .thenReturn(3600000L)
+        whenever(refreshTokenService.createRefreshToken(user))
+            .thenReturn(refreshToken)
 
         val request = LoginRequest(username = "admin@example.com", password = "password123")
         val response = authService.login(request)
 
         assertEquals("mock-jwt-token", response.accessToken)
         assertEquals(3600L, response.expiresIn)
+        assertNotNull(response.refreshToken)
+        assertNotNull(response.refreshExpiresAt)
     }
 
     @Test
