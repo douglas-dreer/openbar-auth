@@ -88,6 +88,21 @@ jobs:
     needs: build
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/develop'
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: openbar_auth
+          POSTGRES_USER: openbar
+          POSTGRES_PASSWORD: openbar123
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
