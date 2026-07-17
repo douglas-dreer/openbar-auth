@@ -211,6 +211,12 @@ jobs:
         run: |
           ./gradlew :openbar-auth:bootRun &
           sleep 30
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_NAME: openbar_auth
+          DB_USERNAME: openbar
+          DB_PASSWORD: openbar123
 
       - name: Run Postman tests
         run: |
