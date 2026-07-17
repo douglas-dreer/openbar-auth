@@ -38,7 +38,7 @@
 |---|---|---|
 | ~~Testes usam H2 (não PostgreSQL)~~ | ~~Não testa SQL específico do PG~~ | ✅ Resolvido (PostgreSQL 16 real) |
 | ~~Sem refresh token~~ | ~~Usuário precisa logar novamente a cada 1h~~ | ✅ Resolvido (Refresh token PostgreSQL, TTL 7 dias) |
-| Sem rate limiting | Vulnerável a brute force no login | Adicionar RateLimiter |
+| ~~Sem rate limiting~~ | ~~Vulnerável a brute force no login~~ | ✅ Resolvido (Bucket4j, 5 req/min/IP) |
 | Sem auditoria de login | Não sabe quem logou quando | Adicionar AuditLog |
 | JWT não pode ser revogado | Token roubado fica válido até expirar | Blacklist no Redis |
 | ~~Sem role-based security~~ | ~~Qualquer user autenticado acessa tudo~~ | ✅ Resolvido (Method security + @PreAuthorize) |
@@ -77,9 +77,9 @@
 - `RefreshTokenResponse.kt` (DTO)
 - Migration: `V2__create_refresh_tokens_table.sql` (ou Redis)
 
-#### 3.2 Rate Limiting no Login
+#### ~~3.2 Rate Limiting no Login~~ ✅ CONCLUÍDA
 
-**Motivo:** Proteção contra brute force.
+**Implementado:** Bucket4j (token bucket) in-memory, 5 req/min/IP, RFC 7807 429.
 
 **Implementação:**
 - Spring Boot + Redis + Bucket4j
@@ -190,7 +190,7 @@
 |---|---|---|---|
 | ~~2 — Testcontainers~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (confiança nos testes)~~ ✅ |
 | ~~3.1 — Refresh Token~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (UX)~~ ✅ |
-| 3.2 — Rate Limiting | ALTA | Baixo | Alto (segurança) |
+| ~~3.2 — Rate Limiting~~ | ~~ALTA~~ | ~~Baixo~~ | ~~Alto (segurança)~~ ✅ |
 | 3.3 — JWT Blacklist | MÉDIA | Baixo | Médio (segurança) |
 | 4.1 — Audit Log | MÉDIA | Médio | Médio (compliance) |
 | ~~5 — Role Security~~ | ~~MÉDIA~~ | ~~Médio~~ | ~~Alto (controle de acesso)~~ ✅ |
@@ -221,4 +221,4 @@
 ---
 
  **Atualizado:** 2026-07-16
- **Próxima revisão:** Após implementação da Fase 3.1 (Refresh Token)
+ **Próxima revisão:** Após implementação da Fase 3.3 (JWT Blacklist)
