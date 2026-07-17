@@ -5,6 +5,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.4.0] - 2026-07-17
+
+### Added
+
+- **openbar-product-manager** microservice (port 8082)
+- Category CRUD: list, create, update, deactivate (with product count validation)
+- Product CRUD: list, search (name/category), create, update, deactivate
+- Product routing enum: KITCHEN / COUNTER
+- Flyway migrations: categories + products tables with seed data
+- Seed data: 5 categories + 14 products (drinks, food, sides, desserts)
+- 25 tests passing (unit + integration)
+- Dockerfile multi-stage build
+- CI: PostgreSQL service + openbar_pm database in all jobs
+- CI: Docker build updated for both services
+
 ## [0.3.0] - 2026-07-17
 
 ### Added
