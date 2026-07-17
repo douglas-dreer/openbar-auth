@@ -41,6 +41,7 @@ subprojects {
         "implementation"("org.jetbrains.kotlin:kotlin-reflect")
         "implementation"("org.flywaydb:flyway-core")
         "implementation"("org.flywaydb:flyway-database-postgresql")
+        "implementation"("com.bucket4j:bucket4j_jdk17-core:8.19.0")
 
         "runtimeOnly"("org.postgresql:postgresql")
 
