@@ -27,6 +27,12 @@ subprojects {
 
     the<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension>().jvmToolchain(21)
 
+    the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
+        imports {
+            mavenBom("org.springframework.boot:spring-boot-dependencies:3.4.7")
+        }
+    }
+
     dependencies {
         "implementation"("org.springframework.boot:spring-boot-starter-data-jpa")
         "implementation"("org.springframework.boot:spring-boot-starter-web")
@@ -35,12 +41,12 @@ subprojects {
         "implementation"("org.jetbrains.kotlin:kotlin-reflect")
         "implementation"("org.flywaydb:flyway-core")
         "implementation"("org.flywaydb:flyway-database-postgresql")
+        "implementation"("com.bucket4j:bucket4j_jdk17-core:8.19.0")
 
         "runtimeOnly"("org.postgresql:postgresql")
 
         "testImplementation"("org.springframework.boot:spring-boot-starter-test")
         "testImplementation"("org.mockito.kotlin:mockito-kotlin:5.4.0")
-        "testImplementation"("com.h2database:h2")
     }
 
     tasks.withType<Test> {

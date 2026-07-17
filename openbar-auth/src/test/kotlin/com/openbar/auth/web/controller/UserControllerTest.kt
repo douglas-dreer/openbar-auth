@@ -1,6 +1,12 @@
 package com.openbar.auth.web.controller
 
+import com.openbar.auth.config.CustomPermissionEvaluator
+import com.openbar.auth.config.RateLimitFilter
 import com.openbar.auth.domain.model.UserRole
+import com.openbar.auth.security.JwtAuthenticationEntryPoint
+import com.openbar.auth.security.JwtAuthenticationFilter
+import com.openbar.auth.security.JwtTokenProvider
+import com.openbar.auth.service.JwtBlacklistService
 import com.openbar.auth.service.UserService
 import com.openbar.auth.web.dto.CreateUserRequest
 import com.openbar.auth.web.dto.UpdateUserRequest
@@ -10,6 +16,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.data.domain.PageImpl
@@ -22,6 +29,7 @@ import org.springframework.test.web.servlet.put
 import java.util.UUID
 
 @WebMvcTest(UserController::class)
+@AutoConfigureMockMvc(addFilters = false)
 class UserControllerTest {
 
     @Autowired
@@ -29,6 +37,24 @@ class UserControllerTest {
 
     @MockitoBean
     lateinit var userService: UserService
+
+    @MockitoBean
+    lateinit var jwtTokenProvider: JwtTokenProvider
+
+    @MockitoBean
+    lateinit var jwtAuthenticationFilter: JwtAuthenticationFilter
+
+    @MockitoBean
+    lateinit var jwtBlacklistService: JwtBlacklistService
+
+    @MockitoBean
+    lateinit var jwtAuthenticationEntryPoint: JwtAuthenticationEntryPoint
+
+    @MockitoBean
+    lateinit var customPermissionEvaluator: CustomPermissionEvaluator
+
+    @MockitoBean
+    lateinit var rateLimitFilter: RateLimitFilter
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
@@ -186,7 +212,7 @@ class UserControllerTest {
     @Test
     fun `delete should return 400 when user not found`() {
         val userId = UUID.randomUUID()
-        org.mockito.kotlin.whenever(userService.softDelete(userId))
+        whenever(userService.softDelete(userId))
             .thenThrow(IllegalArgumentException("User not found"))
 
         mockMvc.delete("/api/v1/auth/users/$userId") {

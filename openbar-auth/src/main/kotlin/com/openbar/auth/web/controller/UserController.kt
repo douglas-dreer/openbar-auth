@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -30,11 +31,13 @@ class UserController(
 ) {
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @Operation(
         summary = "Listar usuários",
         description = "Retorna lista paginada de usuários ativos",
         responses = [
-            ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+            ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+            ApiResponse(responseCode = "403", description = "Acesso negado")
         ]
     )
     fun findAll(pageable: Pageable): ResponseEntity<Page<UserResponse>> {
@@ -42,12 +45,14 @@ class UserController(
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'User', 'own')")
     @Operation(
         summary = "Buscar usuário por ID",
         description = "Retorna os dados de um usuário específico",
         responses = [
             ApiResponse(responseCode = "200", description = "Usuário encontrado"),
-            ApiResponse(responseCode = "400", description = "Usuário não encontrado")
+            ApiResponse(responseCode = "400", description = "Usuário não encontrado"),
+            ApiResponse(responseCode = "403", description = "Acesso negado")
         ]
     )
     fun findById(@PathVariable id: UUID): ResponseEntity<UserResponse> {
@@ -55,12 +60,14 @@ class UserController(
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Criar usuário",
         description = "Cadastra um novo funcionário no sistema",
         responses = [
             ApiResponse(responseCode = "201", description = "Usuário criado com sucesso"),
-            ApiResponse(responseCode = "400", description = "Dados inválidos ou username já existe")
+            ApiResponse(responseCode = "400", description = "Dados inválidos ou username já existe"),
+            ApiResponse(responseCode = "403", description = "Acesso negado")
         ]
     )
     fun create(@Valid @RequestBody request: CreateUserRequest): ResponseEntity<UserResponse> {
@@ -69,12 +76,14 @@ class UserController(
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'User', 'own')")
     @Operation(
         summary = "Atualizar usuário",
         description = "Atualiza dados de um funcionário existente",
         responses = [
             ApiResponse(responseCode = "200", description = "Usuário atualizado"),
-            ApiResponse(responseCode = "400", description = "Usuário não encontrado")
+            ApiResponse(responseCode = "400", description = "Usuário não encontrado"),
+            ApiResponse(responseCode = "403", description = "Acesso negado")
         ]
     )
     fun update(
@@ -85,12 +94,14 @@ class UserController(
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Desativar usuário",
         description = "Soft delete - marca o usuário como inativo (active=false)",
         responses = [
             ApiResponse(responseCode = "204", description = "Usuário desativado"),
-            ApiResponse(responseCode = "400", description = "Usuário não encontrado")
+            ApiResponse(responseCode = "400", description = "Usuário não encontrado"),
+            ApiResponse(responseCode = "403", description = "Acesso negado")
         ]
     )
     fun softDelete(@PathVariable id: UUID): ResponseEntity<Void> {
