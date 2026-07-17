@@ -170,14 +170,24 @@ jobs:
     if: github.ref == 'refs/heads/develop'
     continue-on-error: true
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: openbar_auth
+          POSTGRES_USER: openbar
+          POSTGRES_PASSWORD: openbar123
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Docker Compose
-        run: |
-          docker compose up -d postgres redis kafka
-          sleep 30
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
@@ -188,6 +198,14 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in $(seq 1 20); do
+            pg_isready -h localhost -p 5433 -U openbar && break
+            echo "Waiting for PostgreSQL... ($i/20)"
+            sleep 2
+          done
 
       - name: Run openbar-auth
         run: |
@@ -200,7 +218,3 @@ jobs:
           newman run postman/openbar-auth.postman_collection.json \
             --environment postman/openbar-auth.postman_environment.json \
             --reporters cli
-
-      - name: Docker Compose down
-        if: always()
-        run: docker compose down -v
