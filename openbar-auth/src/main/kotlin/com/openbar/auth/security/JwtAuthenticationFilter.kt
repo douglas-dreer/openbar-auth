@@ -1,5 +1,6 @@
 package com.openbar.auth.security
 
+import com.openbar.auth.service.JwtBlacklistService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -13,7 +14,8 @@ import java.util.UUID
 
 @Component
 class JwtAuthenticationFilter(
-    private val jwtTokenProvider: JwtTokenProvider
+    private val jwtTokenProvider: JwtTokenProvider,
+    private val jwtBlacklistService: JwtBlacklistService
 ) : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
@@ -27,19 +29,25 @@ class JwtAuthenticationFilter(
             val token = extractToken(request)
 
             if (token != null && jwtTokenProvider.validateToken(token)) {
-                val userId = jwtTokenProvider.getUserIdFromToken(token)
-                val role = jwtTokenProvider.getRoleFromToken(token)
+                val jti = jwtTokenProvider.getJtiFromToken(token)
 
-                val principal = UserIdPrincipal(UUID.fromString(userId))
-                val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
+                if (jwtBlacklistService.isTokenBlacklisted(jti)) {
+                    log.debug("Token is blacklisted: $jti")
+                } else {
+                    val userId = jwtTokenProvider.getUserIdFromToken(token)
+                    val role = jwtTokenProvider.getRoleFromToken(token)
 
-                val authentication = UsernamePasswordAuthenticationToken(
-                    principal,
-                    null,
-                    authorities
-                )
+                    val principal = UserIdPrincipal(UUID.fromString(userId))
+                    val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
 
-                SecurityContextHolder.getContext().authentication = authentication
+                    val authentication = UsernamePasswordAuthenticationToken(
+                        principal,
+                        null,
+                        authorities
+                    )
+
+                    SecurityContextHolder.getContext().authentication = authentication
+                }
             }
         } catch (e: Exception) {
             log.debug("Could not set authentication: ${e.message}")

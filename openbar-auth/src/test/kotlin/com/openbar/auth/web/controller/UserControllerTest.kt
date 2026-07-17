@@ -6,6 +6,7 @@ import com.openbar.auth.domain.model.UserRole
 import com.openbar.auth.security.JwtAuthenticationEntryPoint
 import com.openbar.auth.security.JwtAuthenticationFilter
 import com.openbar.auth.security.JwtTokenProvider
+import com.openbar.auth.service.JwtBlacklistService
 import com.openbar.auth.service.UserService
 import com.openbar.auth.web.dto.CreateUserRequest
 import com.openbar.auth.web.dto.UpdateUserRequest
@@ -42,6 +43,9 @@ class UserControllerTest {
 
     @MockitoBean
     lateinit var jwtAuthenticationFilter: JwtAuthenticationFilter
+
+    @MockitoBean
+    lateinit var jwtBlacklistService: JwtBlacklistService
 
     @MockitoBean
     lateinit var jwtAuthenticationEntryPoint: JwtAuthenticationEntryPoint

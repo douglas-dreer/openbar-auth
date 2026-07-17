@@ -106,4 +106,29 @@ class JwtTokenProviderTest {
         assertEquals("claim@test.com", jwtTokenProvider.getUsernameFromToken(token))
         assertEquals("CASHIER", jwtTokenProvider.getRoleFromToken(token))
     }
+
+    @Test
+    fun `getJtiFromToken should return unique jti`() {
+        val user = createUser()
+        val token1 = jwtTokenProvider.generateToken(user)
+        val token2 = jwtTokenProvider.generateToken(user)
+
+        val jti1 = jwtTokenProvider.getJtiFromToken(token1)
+        val jti2 = jwtTokenProvider.getJtiFromToken(token2)
+
+        assertNotNull(jti1)
+        assertNotNull(jti2)
+        assertNotEquals(jti1, jti2)
+    }
+
+    @Test
+    fun `getExpirationFromToken should return expiration date`() {
+        val user = createUser()
+        val token = jwtTokenProvider.generateToken(user)
+
+        val expiration = jwtTokenProvider.getExpirationFromToken(token)
+
+        assertNotNull(expiration)
+        assertTrue(expiration.after(java.util.Date()))
+    }
 }

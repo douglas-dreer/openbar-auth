@@ -6,6 +6,7 @@ import com.openbar.auth.security.JwtAuthenticationEntryPoint
 import com.openbar.auth.security.JwtAuthenticationFilter
 import com.openbar.auth.security.JwtTokenProvider
 import com.openbar.auth.service.AuthService
+import com.openbar.auth.service.JwtBlacklistService
 import com.openbar.auth.service.RefreshTokenService
 import com.openbar.auth.web.dto.LoginRequest
 import com.openbar.auth.web.dto.LoginResponse
@@ -43,6 +44,9 @@ class AuthControllerTest {
 
     @MockitoBean
     lateinit var jwtAuthenticationFilter: JwtAuthenticationFilter
+
+    @MockitoBean
+    lateinit var jwtBlacklistService: JwtBlacklistService
 
     @MockitoBean
     lateinit var jwtAuthenticationEntryPoint: JwtAuthenticationEntryPoint
