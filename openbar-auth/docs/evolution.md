@@ -40,7 +40,7 @@
 | ~~Sem refresh token~~ | ~~Usuário precisa logar novamente a cada 1h~~ | ✅ Resolvido (Refresh token PostgreSQL, TTL 7 dias) |
 | ~~Sem rate limiting~~ | ~~Vulnerável a brute force no login~~ | ✅ Resolvido (Bucket4j, 5 req/min/IP) |
 | Sem auditoria de login | Não sabe quem logou quando | Adicionar AuditLog |
-| JWT não pode ser revogado | Token roubado fica válido até expirar | Blacklist no Redis |
+| ~~JWT não pode ser revogado~~ | ~~Token roubado fica válido até expirar~~ | ✅ Resolvido (Blacklist PostgreSQL + jti claim) |
 | ~~Sem role-based security~~ | ~~Qualquer user autenticado acessa tudo~~ | ✅ Resolvido (Method security + @PreAuthorize) |
 | Sem multi-tenancy | Não suporta múltiplas filiais | TenantInterceptor |
 
@@ -90,9 +90,9 @@
 - `RateLimitConfig.kt`
 - `RateLimitFilter.kt`
 
-#### 3.3 JWT Blacklist (Revogação)
+#### ~~3.3 JWT Blacklist (Revogação)~~ ✅ CONCLUÍDA
 
-**Motivo:** Logout efetivo e revogação de tokens comprometidos.
+**Implementado:** PostgreSQL blacklist, jti claim em cada JWT, verificação no JwtAuthenticationFilter.
 
 **Implementação:**
 - Ao fazer logout, adicionar JWT ID (jti) no Redis com TTL = tempo restante do token
@@ -191,7 +191,7 @@
 | ~~2 — Testcontainers~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (confiança nos testes)~~ ✅ |
 | ~~3.1 — Refresh Token~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (UX)~~ ✅ |
 | ~~3.2 — Rate Limiting~~ | ~~ALTA~~ | ~~Baixo~~ | ~~Alto (segurança)~~ ✅ |
-| 3.3 — JWT Blacklist | MÉDIA | Baixo | Médio (segurança) |
+| ~~3.3 — JWT Blacklist~~ | ~~MÉDIA~~ | ~~Baixo~~ | ~~Médio (segurança)~~ ✅ |
 | 4.1 — Audit Log | MÉDIA | Médio | Médio (compliance) |
 | ~~5 — Role Security~~ | ~~MÉDIA~~ | ~~Médio~~ | ~~Alto (controle de acesso)~~ ✅ |
 | 6 — Multi-Tenancy | BAIXA | Alto | Alto (escala) |
@@ -221,4 +221,4 @@
 ---
 
  **Atualizado:** 2026-07-16
- **Próxima revisão:** Após implementação da Fase 3.3 (JWT Blacklist)
+ **Próxima revisão:** Após implementação da Fase 4.1 (Audit Log)
