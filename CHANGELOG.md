@@ -5,6 +5,20 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.3.0] - 2026-07-17
+
+### Added
+
+- docker-compose.yml para desenvolvimento local (PostgreSQL, Redis, Kafka)
+- V5__seed_admin_user.sql: admin@openbar.com / 123456
+- .env correto para desenvolvimento local
+
+### Fixed
+
+- Postman collection: JSON bodies corrigidos (aspas fechadas)
+- CI: PostgreSQL service em todos os jobs (build, quality, api-tests, release)
+- CI: bootRun com variáveis de ambiente corretas para DB
+
 ## [0.2.2] - 2026-07-17
 
 ### Fixed
@@ -97,6 +111,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - JWT validation stateless per-service (sem chamadas inter-service)
 - Secrets nunca commitados (.env-exemple é template)
 
+[0.3.0]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.3.0
 [0.2.2]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.2.2
 [0.2.1]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.2.1
 [0.2.0]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.2.0
