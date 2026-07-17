@@ -5,6 +5,14 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.2.2] - 2026-07-17
+
+### Fixed
+
+- Corrige pipelines: PostgreSQL service em todos os workflows CI
+- Remove docker compose inexistente do api-tests
+- Release workflow agora roda testes com PostgreSQL
+
 ## [0.2.1] - 2026-07-17
 
 ### Fixed
@@ -89,6 +97,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - JWT validation stateless per-service (sem chamadas inter-service)
 - Secrets nunca commitados (.env-exemple é template)
 
+[0.2.2]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.2.2
 [0.2.1]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.2.1
 [0.2.0]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.2.0
 [0.1.0]: https://github.com/douglas-dreer/openbar-auth/releases/tag/v0.1.0
