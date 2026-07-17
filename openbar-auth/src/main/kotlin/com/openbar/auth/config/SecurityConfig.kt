@@ -21,7 +21,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 class SecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter,
     private val jwtAuthenticationEntryPoint: JwtAuthenticationEntryPoint,
-    private val customPermissionEvaluator: CustomPermissionEvaluator
+    private val customPermissionEvaluator: CustomPermissionEvaluator,
+    private val rateLimitFilter: RateLimitFilter
 ) {
 
     companion object {
@@ -46,6 +47,7 @@ class SecurityConfig(
                     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                     .anyRequest().authenticated()
             }
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()

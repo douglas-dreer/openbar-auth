@@ -1,6 +1,7 @@
 package com.openbar.auth.web.controller
 
 import com.openbar.auth.config.CustomPermissionEvaluator
+import com.openbar.auth.config.RateLimitFilter
 import com.openbar.auth.security.JwtAuthenticationEntryPoint
 import com.openbar.auth.security.JwtAuthenticationFilter
 import com.openbar.auth.security.JwtTokenProvider
@@ -48,6 +49,9 @@ class AuthControllerTest {
 
     @MockitoBean
     lateinit var customPermissionEvaluator: CustomPermissionEvaluator
+
+    @MockitoBean
+    lateinit var rateLimitFilter: RateLimitFilter
 
     @Autowired
     lateinit var objectMapper: ObjectMapper

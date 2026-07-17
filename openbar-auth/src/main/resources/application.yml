@@ -48,6 +48,12 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET:myDefaultSecretKeyForDevelopmentOnlyDoNotUseInProduction2024!}
   expiration: 3600000
+  refresh-expiration: 604800000
+
+rate-limit:
+  enabled: true
+  max-requests: 5
+  period-minutes: 1
 
 logging:
   level:
