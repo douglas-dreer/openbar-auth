@@ -180,11 +180,11 @@ jobs:
           sleep 30
 
       - name: Run Postman tests
-        uses: matt-ball/newman-action@master
-        with:
-          collection: postman/openbar-auth.postman_collection.json
-          environment: postman/openbar-auth.postman_environment.json
-          reporters: cli
+        run: |
+          npm install -g newman
+          newman run postman/openbar-auth.postman_collection.json \
+            --environment postman/openbar-auth.postman_environment.json \
+            --reporters cli
 
       - name: Docker Compose down
         if: always()
