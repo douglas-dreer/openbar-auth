@@ -39,7 +39,7 @@
 | ~~Testes usam H2 (não PostgreSQL)~~ | ~~Não testa SQL específico do PG~~ | ✅ Resolvido (PostgreSQL 16 real) |
 | ~~Sem refresh token~~ | ~~Usuário precisa logar novamente a cada 1h~~ | ✅ Resolvido (Refresh token PostgreSQL, TTL 7 dias) |
 | ~~Sem rate limiting~~ | ~~Vulnerável a brute force no login~~ | ✅ Resolvido (Bucket4j, 5 req/min/IP) |
-| Sem auditoria de login | Não sabe quem logou quando | Adicionar AuditLog |
+| ~~Sem auditoria de login~~ | ~~Não sabe quem logou quando~~ | ✅ Resolvido (AOP + PostgreSQL audit_logs) |
 | ~~JWT não pode ser revogado~~ | ~~Token roubado fica válido até expirar~~ | ✅ Resolvido (Blacklist PostgreSQL + jti claim) |
 | ~~Sem role-based security~~ | ~~Qualquer user autenticado acessa tudo~~ | ✅ Resolvido (Method security + @PreAuthorize) |
 | Sem multi-tenancy | Não suporta múltiplas filiais | TenantInterceptor |
@@ -106,9 +106,9 @@
 
 ### Fase 4 — Auditoria e Logging (Prioridade: MÉDIA)
 
-#### 4.1 Audit Log
+#### ~~4.1 Audit Log~~ ✅ CONCLUÍDA
 
-**Motivo:** Rastreabilidade de ações sensíveis.
+**Implementado:** AOP aspect, AuditLog entity, GET /audit-logs (ADMIN), acoes automaticas.
 
 **Implementação:**
 - Nova entidade: `AuditLog` (id, userId, action, details, timestamp, ip)
@@ -192,7 +192,7 @@
 | ~~3.1 — Refresh Token~~ | ~~ALTA~~ | ~~Médio~~ | ~~Alto (UX)~~ ✅ |
 | ~~3.2 — Rate Limiting~~ | ~~ALTA~~ | ~~Baixo~~ | ~~Alto (segurança)~~ ✅ |
 | ~~3.3 — JWT Blacklist~~ | ~~MÉDIA~~ | ~~Baixo~~ | ~~Médio (segurança)~~ ✅ |
-| 4.1 — Audit Log | MÉDIA | Médio | Médio (compliance) |
+| ~~4.1 — Audit Log~~ | ~~MÉDIA~~ | ~~Médio~~ | ~~Médio (compliance)~~ ✅ |
 | ~~5 — Role Security~~ | ~~MÉDIA~~ | ~~Médio~~ | ~~Alto (controle de acesso)~~ ✅ |
 | 6 — Multi-Tenancy | BAIXA | Alto | Alto (escala) |
 | 7 — Observabilidade | BAIXA | Médio | Médio (operações) |
@@ -221,4 +221,4 @@
 ---
 
  **Atualizado:** 2026-07-16
- **Próxima revisão:** Após implementação da Fase 4.1 (Audit Log)
+ **Próxima revisão:** Fases 2-5 concluidas. Proximo: Fase 6 (Multi-Tenancy) ou Fase 7 (Observabilidade)
